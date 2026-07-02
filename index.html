@@ -141,11 +141,13 @@ table.deals tr:hover td{background:#F5F7FF!important}
 </div>
 
 <script>
-const PROXY = 'https://corsproxy.io/?';
+// Published-to-web Google Sheet CSVs send CORS headers, so we fetch them
+// directly — no proxy needed. (The old corsproxy.io wrapper was what broke it.)
+const BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQje6c5dsiObnfmvrdP1gMbHHmbenMdYxHPIrhHhEbcgqPVrJvZYHdS5IVfJJ1u7QNC17pX8RyESoZx/pub';
 const TABS = [
-  { label:'Ben',   cls:'rep-ben',   url: PROXY + encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vQje6c5dsiObnfmvrdP1gMbHHmbenMdYxHPIrhHhEbcgqPVrJvZYHdS5IVfJJ1u7QNC17pX8RyESoZx/pub?gid=42192991&single=true&output=csv')   },
-  { label:'Ally',  cls:'rep-ally',  url: PROXY + encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vQje6c5dsiObnfmvrdP1gMbHHmbenMdYxHPIrhHhEbcgqPVrJvZYHdS5IVfJJ1u7QNC17pX8RyESoZx/pub?gid=201867602&single=true&output=csv')  },
-  { label:'Steph', cls:'rep-steph', url: PROXY + encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vQje6c5dsiObnfmvrdP1gMbHHmbenMdYxHPIrhHhEbcgqPVrJvZYHdS5IVfJJ1u7QNC17pX8RyESoZx/pub?gid=118813086&single=true&output=csv') }
+  { label:'Ben',   cls:'rep-ben',   url: `${BASE}?gid=42192991&single=true&output=csv`   },
+  { label:'Ally',  cls:'rep-ally',  url: `${BASE}?gid=201867602&single=true&output=csv`  },
+  { label:'Steph', cls:'rep-steph', url: `${BASE}?gid=118813086&single=true&output=csv` }
 ];
 
 function parseCSV(text) {
@@ -194,7 +196,9 @@ function sortVal(s) {
 }
 
 async function fetchCSV(tab) {
-  const resp = await fetch(tab.url);
+  // cache-buster forces a fresh pull on every refresh
+  const resp = await fetch(tab.url + '&_cb=' + Date.now());
+  if (!resp.ok) throw new Error(`${tab.label} tab returned ${resp.status} — check that tab is published as CSV`);
   const text = await resp.text();
   return parseCSV(text).map(r => ({r, label: tab.label, cls: tab.cls}));
 }
