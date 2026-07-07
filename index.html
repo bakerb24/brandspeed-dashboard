@@ -99,6 +99,32 @@ table.deals tr:hover td{background:#F5F7FF!important}
 .toast.err{background:#A32D2D}
 .config-warn{background:#FFF3E0;border:1.5px solid #E07B00;color:#8a4b00;padding:12px 16px;border-radius:8px;font-size:12.5px;margin:1rem 0;line-height:1.6}
 table.deals tbody tr{cursor:pointer}
+
+.date-row{display:flex;gap:8px}
+.date-row input[type=date]{flex:1;min-width:120px}
+.date-row input[type=time]{width:130px}
+.date-chips{margin-top:7px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chip{background:#F0F4FF;border:1px solid #D0D8F0;color:#012169;border-radius:14px;padding:3px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:Calibri,Arial,sans-serif}
+.chip:hover{background:#E0E8FA}
+.chip.active{background:#012169;color:#fff;border-color:#012169}
+table.deals th.sortable{cursor:pointer;user-select:none}
+table.deals th.sortable:hover{background:#023A8A}
+.sort-arrow{font-size:9px;margin-left:3px}
+
+.rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem}
+.rep-card{background:#fff;border:1.5px solid #E0E4EF;border-left-width:5px;border-radius:10px;padding:0.9rem 1.1rem}
+.rep-card.ben{border-left-color:#012169}
+.rep-card.ally{border-left-color:#E07B00}
+.rep-card.steph{border-left-color:#7B1FA2}
+.rep-card-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#012169;margin-bottom:5px}
+.rep-card.ally .rep-card-name{color:#E07B00}
+.rep-card.steph .rep-card-name{color:#7B1FA2}
+.rep-card-main{font-size:30px;font-weight:700;color:#012169;line-height:1}
+.rep-card.ally .rep-card-main{color:#E07B00}
+.rep-card.steph .rep-card-main{color:#7B1FA2}
+.rep-card-unit{font-size:12px;font-weight:600;color:#999;margin-left:7px;text-transform:uppercase;letter-spacing:0.03em}
+.rep-card-sub{font-size:12px;color:#555;margin-top:7px;font-weight:600}
+@media(max-width:640px){.rep-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -118,8 +144,8 @@ table.deals tbody tr{cursor:pointer}
 
 <div class="kpi-grid">
   <div class="kpi navy"><div class="kpi-label">July Goal</div><div class="kpi-value">$100,000</div><div class="kpi-sub">$4,348/day needed</div></div>
-  <div class="kpi green"><div class="kpi-label">Closed This Month</div><div class="kpi-value">$12,580</div><div class="kpi-sub">$6,290/day — ahead of pace</div></div>
-  <div class="kpi red"><div class="kpi-label">Still Needed</div><div class="kpi-value">$87,420</div><div class="kpi-sub">21 days remaining</div></div>
+  <div class="kpi green"><div class="kpi-label">Closed This Month</div><div class="kpi-value" id="kpi-closed">$0</div><div class="kpi-sub" id="kpi-closed-sub">—</div></div>
+  <div class="kpi red"><div class="kpi-label">Still Needed</div><div class="kpi-value" id="kpi-still">$0</div><div class="kpi-sub" id="kpi-still-sub">—</div></div>
   <div class="kpi blue"><div class="kpi-label">Last July</div><div class="kpi-value">$91,680</div><div class="kpi-sub">Goal: beat by $8,320</div></div>
   <div class="kpi teal"><div class="kpi-label">Active Pipeline</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-sub">open deals</div></div>
   <div class="kpi dark"><div class="kpi-label">Won — Approved</div><div class="kpi-value" id="kpi-won">—</div><div class="kpi-sub">in Avail only</div></div>
@@ -127,13 +153,15 @@ table.deals tbody tr{cursor:pointer}
   <div class="kpi gray"><div class="kpi-label">Lost</div><div class="kpi-value" id="kpi-lost">—</div><div class="kpi-sub">this month</div></div>
 </div>
 
+<div class="rep-grid" id="rep-grid"></div>
+
 <div class="progress-card">
   <div class="progress-header">
     <div class="progress-title">July Revenue Pace</div>
-    <div class="progress-pct">12.6% — Day 2 of 23</div>
+    <div class="progress-pct" id="pace-pct">—</div>
   </div>
-  <div class="bar-wrap"><div class="bar-fill"></div></div>
-  <div class="bar-labels"><span>$0</span><span style="color:#1B7A3E;font-weight:600">$12,580 closed</span><span>$100,000 goal</span></div>
+  <div class="bar-wrap"><div class="bar-fill" id="pace-bar"></div></div>
+  <div class="bar-labels"><span>$0</span><span style="color:#1B7A3E;font-weight:600" id="pace-closed">—</span><span>$100,000 goal</span></div>
 </div>
 
 <div class="score-grid">
@@ -186,10 +214,20 @@ table.deals tbody tr{cursor:pointer}
       </div>
       <div class="field"><label>Status</label><select id="f-status"></select></div>
       <div class="field"><label>Next Action</label><textarea id="f-next"></textarea></div>
-      <div class="field-row">
-        <div class="field"><label>Action Date</label><input id="f-date" placeholder="Today, Jul 15, TBD, Done"></div>
-        <div class="field"><label>Notes</label><input id="f-notes"></div>
+      <div class="field">
+        <label>Next Action Date</label>
+        <div class="date-row">
+          <input type="date" id="f-date">
+          <input type="time" id="f-time">
+        </div>
+        <div class="date-chips">
+          <button type="button" class="chip" id="chip-tbd" onclick="setDateLabel('TBD')">TBD</button>
+          <button type="button" class="chip" id="chip-done" onclick="setDateLabel('Done')">Done</button>
+          <button type="button" class="chip" onclick="clearDate()">Clear</button>
+          <span class="modal-hint" id="date-current"></span>
+        </div>
       </div>
+      <div class="field"><label>Notes</label><input id="f-notes"></div>
     </div>
     <div class="modal-foot">
       <button class="btn-delete" id="btn-delete" onclick="deleteDeal()">Delete</button>
@@ -205,64 +243,180 @@ table.deals tbody tr{cursor:pointer}
 </div>
 
 <script>
-// ============================================================
-//  PASTE YOUR APPS SCRIPT WEB APP URL BELOW (the one ending /exec)
-// ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbztge8uSJlU1F5SPDbZ2NlIHTYf1vJddmKSuRmptERypyYlKUbA2fzSboUxVck06SXG/exec';
 const TOKEN   = 'bs-deal-2026';   // must match TOKEN in Code.gs
+const GOAL    = 100000;
 
 const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Lost'];
-let ALL_DEALS = [], ALL_TABS = ['Ben','Ally','Steph'], EDITING = null;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MNUM = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+
+let ALL_DEALS=[], VIEW=[], ALL_TABS=['Ben','Ally','Steph'], EDITING=null, DATE_LABEL='';
+let SORT={key:'date',dir:'asc'};
 
 function repClass(rep){var r=(rep||'').toLowerCase();if(r.indexOf('ally')>-1)return'rep-ally';if(r.indexOf('steph')>-1)return'rep-steph';return'rep-ben';}
+function repAccent(t){var r=(t||'').toLowerCase();if(r.indexOf('ally')>-1)return'ally';if(r.indexOf('steph')>-1)return'steph';return'ben';}
 function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
 function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
 var ORDER=['urgent','active','won \u2014 action','won \u2014 action needed','parked','won','lost'];
-function sortVal(s){var sl=(s||'').toLowerCase();for(var i=0;i<ORDER.length;i++){if(sl.indexOf(ORDER[i])>-1)return i;}return 99;}
+function statusRank(s){var sl=(s||'').toLowerCase();for(var i=0;i<ORDER.length;i++){if(sl.indexOf(ORDER[i])>-1)return i;}return 99;}
 function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pad(n){return (n<10?'0':'')+n;}
+function parseValNum(v){if(!v)return 0;var n=String(v).replace(/[^0-9.]/g,'');var f=parseFloat(n);return isNaN(f)?0:f;}
+function money(n){return '$'+Math.round(n||0).toLocaleString('en-US');}
 
+function isWon(s){return String(s||'').toLowerCase().indexOf('won')>-1;}
+function isLost(s){return String(s||'').toLowerCase().indexOf('lost')>-1;}
+function isOpenStatus(s){return !isWon(s)&&!isLost(s);}
+function ymNow(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+function closedMonthKey(d){
+  var cd=toDateParts(d.closedDate||'');
+  if(cd){var p=cd.date.split('-');return p[0]+'-'+p[1];}
+  if(isWon(d.status)){var m=String(d.deal||'').match(/^(\d{2})-(\d{2})-/);if(m)return '20'+m[1]+'-'+m[2];}
+  return null;
+}
+
+/* ---------- date handling ---------- */
+function toDateParts(raw){
+  if(raw==null) return null;
+  var s=String(raw).trim();
+  if(!s) return null;
+  if(/^(tbd|done|n\/a|na|-)$/i.test(s)) return null;
+  var m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return {date:s, time:''};
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
+  if(m) return {date:m[1]+'-'+m[2]+'-'+m[3], time:m[4]+':'+m[5]};
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) && /([Zz]|[+\-]\d{2}:?\d{2})$/.test(s)){
+    var d=new Date(s);
+    if(!isNaN(d.getTime())) return {date:d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()), time:''};
+  }
+  var low=s.toLowerCase(); var today=new Date();
+  if(low==='today') return {date:today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate()), time:''};
+  if(low==='tomorrow'){var t=new Date(today.getTime()+864e5);return {date:t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()), time:''};}
+  if(low==='yesterday'){var y=new Date(today.getTime()-864e5);return {date:y.getFullYear()+'-'+pad(y.getMonth()+1)+'-'+pad(y.getDate()), time:''};}
+  m=s.match(/^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$/);
+  if(m && MNUM[m[1].toLowerCase()]){
+    var mo=MNUM[m[1].toLowerCase()], day=parseInt(m[2],10), yr=m[3]?parseInt(m[3],10):today.getFullYear();
+    return {date:yr+'-'+pad(mo)+'-'+pad(day), time:''};
+  }
+  m=s.match(/^([A-Za-z]{3,9})\.?\s+(\d{4})$/);
+  if(m && MNUM[m[1].toLowerCase()]) return {date:m[2]+'-'+pad(MNUM[m[1].toLowerCase()])+'-01', time:''};
+  return null;
+}
+function parseSort(raw){
+  var p=toDateParts(raw);
+  if(!p) return Infinity;
+  var dp=p.date.split('-'), t=(p.time||'00:00').split(':');
+  return new Date(+dp[0], +dp[1]-1, +dp[2], +t[0], +t[1]).getTime();
+}
+function fmtTime(hhmm){var a=hhmm.split(':'),h=+a[0],mn=a[1],ap=h<12?'AM':'PM',h12=h%12;if(h12===0)h12=12;return h12+':'+mn+' '+ap;}
+function formatBadge(raw){
+  var p=toDateParts(raw);
+  if(!p) return raw==null?'':String(raw);
+  var dp=p.date.split('-'), y=+dp[0], mo=+dp[1], day=+dp[2];
+  var out=MONTHS[mo-1]+' '+day;
+  if(y!==new Date().getFullYear()) out+=', '+y;
+  if(p.time) out+=', '+fmtTime(p.time);
+  return out;
+}
+
+/* ---------- load + render ---------- */
 async function loadAllData(){
   document.getElementById('last-updated').textContent='Refreshing...';
   if(API_URL.indexOf('PASTE_')===0){
-    document.getElementById('dashboard-content').innerHTML='<div class="config-warn"><strong>One step left to go live.</strong><br>Paste your Apps Script Web App URL into the <code>API_URL</code> line near the top of the script, then push to GitHub. Until then the board can\'t read or save deals.</div>';
-    document.getElementById('last-updated').textContent='Needs API URL';
-    return;
+    document.getElementById('dashboard-content').innerHTML='<div class="config-warn"><strong>One step left to go live.</strong><br>Paste your Apps Script Web App URL into the <code>API_URL</code> line, then push to GitHub.</div>';
+    document.getElementById('last-updated').textContent='Needs API URL';return;
   }
   try{
     var resp=await fetch(API_URL+'?_cb='+Date.now());
     var data=await resp.json();
     if(!data.ok) throw new Error(data.error||'load failed');
-    ALL_DEALS=(data.deals||[]).sort(function(a,b){return sortVal(a.status)-sortVal(b.status);});
+    ALL_DEALS=data.deals||[];
     if(data.tabs&&data.tabs.length) ALL_TABS=data.tabs;
     render();
     var now=new Date();
     document.getElementById('last-updated').textContent='Live \u2014 '+now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' at '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   }catch(err){
-    document.getElementById('dashboard-content').innerHTML='<div class="error"><strong>Could not load data.</strong><br>Error: '+esc(err.message)+'<br><br>Check the Apps Script URL, and that the Web App is deployed with access set to "Anyone".</div>';
+    document.getElementById('dashboard-content').innerHTML='<div class="error"><strong>Could not load data.</strong><br>Error: '+esc(err.message)+'<br><br>Check the Apps Script URL and that the Web App access is set to "Anyone".</div>';
     document.getElementById('last-updated').textContent='Error loading data';
   }
 }
 
+function cmp(a,b){
+  var dir=SORT.dir==='desc'?-1:1, k=SORT.key;
+  if(k==='date'){
+    var ta=parseSort(a.actionDate), tb=parseSort(b.actionDate);
+    if(ta===Infinity&&tb===Infinity) return 0;
+    if(ta===Infinity) return 1;
+    if(tb===Infinity) return -1;
+    return (ta-tb)*dir;
+  }
+  if(k==='status') return (statusRank(a.status)-statusRank(b.status))*dir;
+  if(k==='value')  return (parseValNum(a.value)-parseValNum(b.value))*dir;
+  var va=(a[k]||'').toString().toLowerCase(), vb=(b[k]||'').toString().toLowerCase();
+  return va<vb?-dir:va>vb?dir:0;
+}
+function sortBy(key){
+  if(SORT.key===key) SORT.dir=(SORT.dir==='asc'?'desc':'asc');
+  else { SORT.key=key; SORT.dir='asc'; }
+  render();
+}
+function arrow(key){return SORT.key===key?'<span class="sort-arrow">'+(SORT.dir==='asc'?'\u25B2':'\u25BC')+'</span>':'';}
+function th(label,key,w){return '<th class="sortable"'+(w?' style="width:'+w+'"':'')+' onclick="sortBy(\''+key+'\')">'+label+arrow(key)+'</th>';}
+
 function render(){
   var active=0,won=0,urgent=0,lost=0,parked=0;
+  var ym=ymNow();
+  var open={}, cwon={}, cval={};
+  ALL_TABS.forEach(function(t){open[t]=0;cwon[t]=0;cval[t]=0;});
+  var totClosedVal=0, totClosedCnt=0;
+
   ALL_DEALS.forEach(function(d){
-    var s=(d.status||'').toLowerCase();
+    var s=(d.status||'').toLowerCase(), t=d.tab||d.rep;
+    if(open[t]==null){open[t]=0;cwon[t]=0;cval[t]=0;}
     if(s.indexOf('urgent')>-1){urgent++;active++;}
     else if(s.indexOf('active')>-1)active++;
     if(s.indexOf('won')>-1)won++;
     if(s.indexOf('lost')>-1)lost++;
     if(s.indexOf('parked')>-1)parked++;
+    if(isOpenStatus(d.status)) open[t]++;
+    if(isWon(d.status) && closedMonthKey(d)===ym){
+      cwon[t]++; var v=parseValNum(d.value); cval[t]+=v;
+      totClosedCnt++; totClosedVal+=v;
+    }
   });
+
   setTxt('kpi-active',active);setTxt('kpi-won',won);setTxt('kpi-urgent',urgent);setTxt('kpi-lost',lost);
   setTxt('score-won',won);setTxt('score-lost',lost);setTxt('score-active',active);setTxt('score-parked',parked);
+
+  // rep cards
+  document.getElementById('rep-grid').innerHTML = ALL_TABS.map(function(t){
+    return '<div class="rep-card '+repAccent(t)+'">'
+      +'<div class="rep-card-name">'+esc(t)+'</div>'
+      +'<div class="rep-card-main">'+(open[t]||0)+'<span class="rep-card-unit">open</span></div>'
+      +'<div class="rep-card-sub">'+(cwon[t]||0)+' closed this month \u00b7 '+money(cval[t]||0)+'</div>'
+      +'</div>';
+  }).join('');
+
+  // live headline KPIs + pace
+  setTxt('kpi-closed', money(totClosedVal));
+  setTxt('kpi-closed-sub', totClosedCnt+' deal'+(totClosedCnt===1?'':'s')+' this month');
+  setTxt('kpi-still', money(Math.max(GOAL-totClosedVal,0)));
+  var now=new Date(), totalDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(), dayNo=now.getDate(), remain=totalDays-dayNo;
+  setTxt('kpi-still-sub', remain+' day'+(remain===1?'':'s')+' left');
+  var pct=Math.min(totClosedVal/GOAL*100,100);
+  setTxt('pace-pct', pct.toFixed(1)+'% \u2014 Day '+dayNo+' of '+totalDays);
+  setTxt('pace-closed', money(totClosedVal)+' closed');
+  var bar=document.getElementById('pace-bar'); if(bar) bar.style.width=pct.toFixed(2)+'%';
 
   var counts={};ALL_TABS.forEach(function(t){counts[t]=0;});
   ALL_DEALS.forEach(function(d){var t=d.tab||d.rep;if(counts[t]!=null)counts[t]++;});
   setTxt('deal-summary',ALL_DEALS.length+' total deals \u2014 '+ALL_TABS.map(function(t){return counts[t]+' '+t;}).join(' \u00b7 '));
 
-  var tbody = ALL_DEALS.length===0
+  VIEW=ALL_DEALS.slice().sort(cmp);
+  var tbody = VIEW.length===0
     ? '<tr class="empty-row"><td colspan="8">No deals yet \u2014 click \u201c+ Add Deal\u201d to start</td></tr>'
-    : ALL_DEALS.map(function(d,i){return '<tr class="'+getRowClass(d.status)+'" onclick="openModal('+i+')">'
+    : VIEW.map(function(d,i){return '<tr class="'+getRowClass(d.status)+'" onclick="openModal('+i+')">'
         +'<td>'+esc(d.deal)+'</td>'
         +'<td><span class="'+repClass(d.rep)+'">'+esc(d.rep)+'</span></td>'
         +'<td>'+esc(d.company)+'</td>'
@@ -270,22 +424,23 @@ function render(){
         +'<td>'+esc(d.value)+'</td>'
         +'<td><span class="'+getPill(d.status)+'">'+esc(d.status)+'</span></td>'
         +'<td>'+esc(d.nextAction)+'</td>'
-        +'<td><span class="date-badge">'+esc(d.actionDate)+'</span></td>'
+        +'<td><span class="date-badge">'+esc(formatBadge(d.actionDate))+'</span></td>'
       +'</tr>';}).join('');
 
   document.getElementById('dashboard-content').innerHTML=
     '<table class="deals"><thead><tr>'
-    +'<th style="width:78px">Deal #</th><th style="width:44px">Rep</th>'
-    +'<th style="width:17%">Company</th><th style="width:12%">Contact</th>'
-    +'<th style="width:7%">Value</th><th style="width:11%">Status</th>'
-    +'<th>Next Action</th><th style="width:88px">Date</th>'
-    +'</tr></thead><tbody>'+tbody+'</tbody></table>';
+    + th('Deal #','deal','78px') + th('Rep','rep','44px') + th('Company','company','17%')
+    + '<th style="width:12%">Contact</th>' + th('Value','value','7%') + th('Status','status','11%')
+    + '<th>Next Action</th>' + th('Date','date','96px')
+    + '</tr></thead><tbody>'+tbody+'</tbody></table>';
 }
 function setTxt(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 function val(id){return document.getElementById(id).value.trim();}
+function setVal(id,v){document.getElementById(id).value=v;}
 
+/* ---------- modal ---------- */
 function openModal(i){
-  EDITING=(i===null||i===undefined)?null:ALL_DEALS[i];
+  EDITING=(i===null||i===undefined)?null:VIEW[i];
   document.getElementById('modal-title').textContent=EDITING?'Edit Deal':'Add Deal';
   document.getElementById('f-rep').innerHTML=ALL_TABS.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>';}).join('');
   document.getElementById('f-status').innerHTML=STATUS_OPTIONS.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join('');
@@ -297,14 +452,34 @@ function openModal(i){
   document.getElementById('f-rep').disabled=!!EDITING;
   setVal('f-company',d.company||'');setVal('f-contact',d.contact||'');setVal('f-value',d.value||'');
   setVal('f-email',d.email||'');setVal('f-phone',d.phone||'');
-  setVal('f-status',d.status||'Active');setVal('f-next',d.nextAction||'');
-  setVal('f-date',d.actionDate||'');setVal('f-notes',d.notes||'');
+  setVal('f-status',d.status||'Active');setVal('f-next',d.nextAction||'');setVal('f-notes',d.notes||'');
+  var p=toDateParts(d.actionDate||'');
+  if(p){ setVal('f-date',p.date); setVal('f-time',p.time||''); DATE_LABEL=''; }
+  else { setVal('f-date',''); setVal('f-time',''); DATE_LABEL=d.actionDate?String(d.actionDate):''; }
+  updateDateUI();
   document.getElementById('btn-delete').style.display=EDITING?'inline-block':'none';
   document.getElementById('modal').classList.add('open');
 }
-function setVal(id,v){document.getElementById(id).value=v;}
 function closeModal(){document.getElementById('modal').classList.remove('open');EDITING=null;}
 
+function computeDateValue(){
+  var dv=val('f-date'), tv=val('f-time');
+  if(dv) return tv ? dv+' '+tv : dv;
+  if(DATE_LABEL) return DATE_LABEL;
+  return '';
+}
+function setDateLabel(l){DATE_LABEL=l;setVal('f-date','');setVal('f-time','');updateDateUI();}
+function clearDate(){DATE_LABEL='';setVal('f-date','');setVal('f-time','');updateDateUI();}
+function updateDateUI(){
+  var tbd=document.getElementById('chip-tbd'), done=document.getElementById('chip-done');
+  tbd.classList.toggle('active', DATE_LABEL.toLowerCase()==='tbd');
+  done.classList.toggle('active', DATE_LABEL.toLowerCase()==='done');
+  var v=computeDateValue(), cap=document.getElementById('date-current');
+  if(!v) cap.textContent='';
+  else cap.textContent = toDateParts(v) ? '\u2192 '+formatBadge(v) : 'Marked: '+v;
+}
+
+/* ---------- save / delete ---------- */
 async function post(payload){
   payload.token=TOKEN;
   var resp=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
@@ -316,7 +491,7 @@ function toast(msg,isErr){var t=document.getElementById('toast');t.textContent=m
 
 async function saveDeal(){
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Saving...';
-  var fields={company:val('f-company'),contact:val('f-contact'),value:val('f-value'),email:val('f-email'),phone:val('f-phone'),status:val('f-status'),nextAction:val('f-next'),actionDate:val('f-date'),notes:val('f-notes')};
+  var fields={company:val('f-company'),contact:val('f-contact'),value:val('f-value'),email:val('f-email'),phone:val('f-phone'),status:val('f-status'),nextAction:val('f-next'),actionDate:computeDateValue(),notes:val('f-notes')};
   try{
     if(EDITING){
       fields.action='update';fields.tab=EDITING.tab;fields.rowIndex=EDITING.rowIndex;fields.deal=EDITING.deal;fields.rep=EDITING.rep;
@@ -329,7 +504,6 @@ async function saveDeal(){
   }catch(err){toast(err.message,true);}
   btn.disabled=false;btn.textContent='Save';
 }
-
 async function deleteDeal(){
   if(!EDITING)return;
   if(!confirm('Delete '+EDITING.deal+' ('+EDITING.company+')?\nThis removes the row from the Sheet.'))return;
@@ -339,6 +513,8 @@ async function deleteDeal(){
 
 document.getElementById('modal').addEventListener('click',function(e){if(e.target.id==='modal')closeModal();});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
+document.getElementById('f-date').addEventListener('input',function(){DATE_LABEL='';updateDateUI();});
+document.getElementById('f-time').addEventListener('input',function(){updateDateUI();});
 
 loadAllData();
 </script>
