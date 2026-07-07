@@ -70,6 +70,35 @@ table.deals tr:hover td{background:#F5F7FF!important}
 .error{text-align:center;padding:2rem;color:#A32D2D;background:#FCEBEB;border-radius:8px;margin:1rem 0;line-height:1.8}
 .empty-row td{color:#aaa;font-style:italic;text-align:center;padding:1.25rem}
 .footer{margin-top:1.5rem;padding-top:1rem;border-top:1px solid #E0E4EF;font-size:11px;color:#aaa;text-align:center;line-height:1.8}
+
+.btn-add{background:#1B7A3E;color:#fff;border:none;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Calibri,Arial,sans-serif;font-weight:600;margin-right:8px}
+.btn-add:hover{background:#155f30}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(1,33,105,0.45);z-index:100;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25);margin:auto}
+.modal-head{background:#012169;color:#fff;padding:1rem 1.25rem;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center}
+.modal-head h2{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;padding:0 4px}
+.modal-body{padding:1.25rem}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:700;color:#012169;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1.5px solid #D0D8F0;border-radius:6px;font-size:13px;font-family:Calibri,Arial,sans-serif;color:#222;background:#fff}
+.field input:disabled,.field select:disabled{background:#F2F4FA;color:#888}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#009CDE}
+.field textarea{resize:vertical;min-height:54px;line-height:1.4}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-hint{font-size:10.5px;color:#999;margin-top:3px}
+.modal-foot{padding:1rem 1.25rem;border-top:1px solid #EEF0F8;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.btn-save{background:#012169;color:#fff;border:none;padding:9px 22px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;font-family:Calibri,Arial,sans-serif}
+.btn-save:hover{background:#023A8A}
+.btn-save:disabled{opacity:0.6;cursor:default}
+.btn-delete{background:none;color:#A32D2D;border:1.5px solid #E7B4B4;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:Calibri,Arial,sans-serif}
+.btn-delete:hover{background:#FCEBEB}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1B7A3E;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:0 4px 18px rgba(0,0,0,0.2)}
+.toast.show{opacity:1}
+.toast.err{background:#A32D2D}
+.config-warn{background:#FFF3E0;border:1.5px solid #E07B00;color:#8a4b00;padding:12px 16px;border-radius:8px;font-size:12.5px;margin:1rem 0;line-height:1.6}
+table.deals tbody tr{cursor:pointer}
 </style>
 </head>
 <body>
@@ -116,7 +145,7 @@ table.deals tr:hover td{background:#F5F7FF!important}
 
 <div class="refresh-bar">
   <span id="deal-summary">Loading deals...</span>
-  <button class="refresh-btn" onclick="loadAllData()">↻ Refresh</button>
+  <button class="btn-add" onclick="openModal(null)">+ Add Deal</button><button class="refresh-btn" onclick="loadAllData()">↻ Refresh</button>
 </div>
 
 <div class="legend">
@@ -135,142 +164,181 @@ table.deals tr:hover td{background:#F5F7FF!important}
   <div class="loading">Loading deals from Google Sheets...</div>
 </div>
 
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Edit Deal</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>Deal #</label><input id="f-deal"><div class="modal-hint" id="deal-hint">Leave blank to auto-number (26-07-XXX)</div></div>
+        <div class="field"><label>Rep</label><select id="f-rep"></select></div>
+      </div>
+      <div class="field"><label>Company</label><input id="f-company"></div>
+      <div class="field-row">
+        <div class="field"><label>Contact</label><input id="f-contact"></div>
+        <div class="field"><label>Value</label><input id="f-value" placeholder="e.g. ~$2000 or TBD"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Email</label><input id="f-email"></div>
+        <div class="field"><label>Phone</label><input id="f-phone"></div>
+      </div>
+      <div class="field"><label>Status</label><select id="f-status"></select></div>
+      <div class="field"><label>Next Action</label><textarea id="f-next"></textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Action Date</label><input id="f-date" placeholder="Today, Jul 15, TBD, Done"></div>
+        <div class="field"><label>Notes</label><input id="f-notes"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-delete" id="btn-delete" onclick="deleteDeal()">Delete</button>
+      <button class="btn-save" id="btn-save" onclick="saveDeal()">Save</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
 <div class="footer">
   BrandSpeed Sales Dashboard &nbsp;|&nbsp; July 2026 &nbsp;|&nbsp; Won = approved in Avail only &nbsp;|&nbsp; New deals: 26-07-XXX &nbsp;|&nbsp; ben@brandspeed.us · 704.664.8337
 </div>
 </div>
 
 <script>
-// Published-to-web Google Sheet CSVs send CORS headers, so we fetch them
-// directly — no proxy needed. (The old corsproxy.io wrapper was what broke it.)
-const BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQje6c5dsiObnfmvrdP1gMbHHmbenMdYxHPIrhHhEbcgqPVrJvZYHdS5IVfJJ1u7QNC17pX8RyESoZx/pub';
-const TABS = [
-  { label:'Ben',   cls:'rep-ben',   url: `${BASE}?gid=42192991&single=true&output=csv`   },
-  { label:'Ally',  cls:'rep-ally',  url: `${BASE}?gid=201867602&single=true&output=csv`  },
-  { label:'Steph', cls:'rep-steph', url: `${BASE}?gid=118813086&single=true&output=csv` }
-];
+// ============================================================
+//  PASTE YOUR APPS SCRIPT WEB APP URL BELOW (the one ending /exec)
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbztge8uSJlU1F5SPDbZ2NlIHTYf1vJddmKSuRmptERypyYlKUbA2fzSboUxVck06SXG/exec';
+const TOKEN   = 'bs-deal-2026';   // must match TOKEN in Code.gs
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  return lines.slice(1).map(line => {
-    const cols = [];
-    let cur = '', inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"' && !inQ) { inQ = true; }
-      else if (ch === '"' && inQ) { inQ = false; }
-      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-      else { cur += ch; }
-    }
-    cols.push(cur.trim());
-    return cols;
-  }).filter(r => r[0] && r[0].trim() !== '');
-}
+const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Lost'];
+let ALL_DEALS = [], ALL_TABS = ['Ben','Ally','Steph'], EDITING = null;
 
-function getRowClass(s) {
-  s = (s||'').toLowerCase();
-  if (s.includes('urgent')) return 'row-urgent';
-  if (s.includes('won') && (s.includes('action')||s.includes('needed'))) return 'row-won-action';
-  if (s.includes('won')) return 'row-won';
-  if (s.includes('lost')) return 'row-lost';
-  if (s.includes('parked')) return 'row-parked';
-  return 'row-active';
-}
+function repClass(rep){var r=(rep||'').toLowerCase();if(r.indexOf('ally')>-1)return'rep-ally';if(r.indexOf('steph')>-1)return'rep-steph';return'rep-ben';}
+function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
+function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
+var ORDER=['urgent','active','won \u2014 action','won \u2014 action needed','parked','won','lost'];
+function sortVal(s){var sl=(s||'').toLowerCase();for(var i=0;i<ORDER.length;i++){if(sl.indexOf(ORDER[i])>-1)return i;}return 99;}
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-function getPill(s) {
-  const sl = (s||'').toLowerCase();
-  if (sl.includes('urgent')) return 'pill pill-urgent';
-  if (sl.includes('won') && (sl.includes('action')||sl.includes('needed'))) return 'pill pill-won-action';
-  if (sl.includes('won')) return 'pill pill-won';
-  if (sl.includes('lost')) return 'pill pill-lost';
-  if (sl.includes('parked')) return 'pill pill-parked';
-  return 'pill pill-active';
-}
-
-const ORDER = ['urgent','active','won — action','won — action needed','parked','won','lost'];
-function sortVal(s) {
-  const sl = (s||'').toLowerCase();
-  const i = ORDER.findIndex(o => sl.includes(o));
-  return i === -1 ? 99 : i;
-}
-
-async function fetchCSV(tab) {
-  // cache-buster forces a fresh pull on every refresh
-  const resp = await fetch(tab.url + '&_cb=' + Date.now());
-  if (!resp.ok) throw new Error(`${tab.label} tab returned ${resp.status} — check that tab is published as CSV`);
-  const text = await resp.text();
-  return parseCSV(text).map(r => ({r, label: tab.label, cls: tab.cls}));
-}
-
-async function loadAllData() {
-  document.getElementById('last-updated').textContent = 'Refreshing...';
-  try {
-    const results = await Promise.all(TABS.map(fetchCSV));
-    const all = results.flat().sort((a,b) => sortVal(a.r[7]) - sortVal(b.r[7]));
-
-    let active=0,won=0,urgent=0,lost=0,parked=0;
-    all.forEach(({r}) => {
-      const s=(r[7]||'').toLowerCase();
-      if(s.includes('urgent')){urgent++;active++;}
-      else if(s.includes('active')) active++;
-      if(s.includes('won')) won++;
-      if(s.includes('lost')) lost++;
-      if(s.includes('parked')) parked++;
-    });
-
-    ['kpi-active','score-active'].forEach(id => document.getElementById(id).textContent = active);
-    ['kpi-won','score-won'].forEach(id => document.getElementById(id).textContent = won);
-    ['kpi-urgent'].forEach(id => document.getElementById(id).textContent = urgent);
-    ['kpi-lost','score-lost'].forEach(id => document.getElementById(id).textContent = lost);
-    document.getElementById('score-parked').textContent = parked;
-
-    const counts = results.map(r=>r.length);
-    document.getElementById('deal-summary').textContent =
-      `${all.length} total deals — ${counts[0]} Ben · ${counts[1]} Ally · ${counts[2]} Stephanie`;
-
-    let tbody = all.length === 0
-      ? '<tr class="empty-row"><td colspan="8">No deals found — add deals to the Google Sheet</td></tr>'
-      : all.map(({r,label,cls}) => `<tr class="${getRowClass(r[7])}">
-          <td>${r[0]||''}</td>
-          <td><span class="${cls}">${label}</span></td>
-          <td>${r[2]||''}</td>
-          <td>${r[3]||''}</td>
-          <td>${r[6]||''}</td>
-          <td><span class="${getPill(r[7])}">${r[7]||''}</span></td>
-          <td>${r[8]||''}</td>
-          <td><span class="date-badge">${r[9]||''}</span></td>
-        </tr>`).join('');
-
-    document.getElementById('dashboard-content').innerHTML = `
-      <table class="deals">
-        <thead><tr>
-          <th style="width:78px">Deal #</th>
-          <th style="width:44px">Rep</th>
-          <th style="width:17%">Company</th>
-          <th style="width:12%">Contact</th>
-          <th style="width:7%">Value</th>
-          <th style="width:11%">Status</th>
-          <th>Next Action</th>
-          <th style="width:88px">Date</th>
-        </tr></thead>
-        <tbody>${tbody}</tbody>
-      </table>`;
-
-    const now = new Date();
-    document.getElementById('last-updated').textContent =
-      `Live — ${now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} at ${now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`;
-
-  } catch(err) {
-    document.getElementById('dashboard-content').innerHTML =
-      `<div class="error">
-        <strong>Could not load data.</strong><br>
-        Error: ${err.message}<br><br>
-        Make sure the Google Sheet tabs (Ben, Ally, Stephanie) are published as CSV.
-      </div>`;
-    document.getElementById('last-updated').textContent = 'Error loading data';
+async function loadAllData(){
+  document.getElementById('last-updated').textContent='Refreshing...';
+  if(API_URL.indexOf('PASTE_')===0){
+    document.getElementById('dashboard-content').innerHTML='<div class="config-warn"><strong>One step left to go live.</strong><br>Paste your Apps Script Web App URL into the <code>API_URL</code> line near the top of the script, then push to GitHub. Until then the board can\'t read or save deals.</div>';
+    document.getElementById('last-updated').textContent='Needs API URL';
+    return;
+  }
+  try{
+    var resp=await fetch(API_URL+'?_cb='+Date.now());
+    var data=await resp.json();
+    if(!data.ok) throw new Error(data.error||'load failed');
+    ALL_DEALS=(data.deals||[]).sort(function(a,b){return sortVal(a.status)-sortVal(b.status);});
+    if(data.tabs&&data.tabs.length) ALL_TABS=data.tabs;
+    render();
+    var now=new Date();
+    document.getElementById('last-updated').textContent='Live \u2014 '+now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' at '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  }catch(err){
+    document.getElementById('dashboard-content').innerHTML='<div class="error"><strong>Could not load data.</strong><br>Error: '+esc(err.message)+'<br><br>Check the Apps Script URL, and that the Web App is deployed with access set to "Anyone".</div>';
+    document.getElementById('last-updated').textContent='Error loading data';
   }
 }
+
+function render(){
+  var active=0,won=0,urgent=0,lost=0,parked=0;
+  ALL_DEALS.forEach(function(d){
+    var s=(d.status||'').toLowerCase();
+    if(s.indexOf('urgent')>-1){urgent++;active++;}
+    else if(s.indexOf('active')>-1)active++;
+    if(s.indexOf('won')>-1)won++;
+    if(s.indexOf('lost')>-1)lost++;
+    if(s.indexOf('parked')>-1)parked++;
+  });
+  setTxt('kpi-active',active);setTxt('kpi-won',won);setTxt('kpi-urgent',urgent);setTxt('kpi-lost',lost);
+  setTxt('score-won',won);setTxt('score-lost',lost);setTxt('score-active',active);setTxt('score-parked',parked);
+
+  var counts={};ALL_TABS.forEach(function(t){counts[t]=0;});
+  ALL_DEALS.forEach(function(d){var t=d.tab||d.rep;if(counts[t]!=null)counts[t]++;});
+  setTxt('deal-summary',ALL_DEALS.length+' total deals \u2014 '+ALL_TABS.map(function(t){return counts[t]+' '+t;}).join(' \u00b7 '));
+
+  var tbody = ALL_DEALS.length===0
+    ? '<tr class="empty-row"><td colspan="8">No deals yet \u2014 click \u201c+ Add Deal\u201d to start</td></tr>'
+    : ALL_DEALS.map(function(d,i){return '<tr class="'+getRowClass(d.status)+'" onclick="openModal('+i+')">'
+        +'<td>'+esc(d.deal)+'</td>'
+        +'<td><span class="'+repClass(d.rep)+'">'+esc(d.rep)+'</span></td>'
+        +'<td>'+esc(d.company)+'</td>'
+        +'<td>'+esc(d.contact)+'</td>'
+        +'<td>'+esc(d.value)+'</td>'
+        +'<td><span class="'+getPill(d.status)+'">'+esc(d.status)+'</span></td>'
+        +'<td>'+esc(d.nextAction)+'</td>'
+        +'<td><span class="date-badge">'+esc(d.actionDate)+'</span></td>'
+      +'</tr>';}).join('');
+
+  document.getElementById('dashboard-content').innerHTML=
+    '<table class="deals"><thead><tr>'
+    +'<th style="width:78px">Deal #</th><th style="width:44px">Rep</th>'
+    +'<th style="width:17%">Company</th><th style="width:12%">Contact</th>'
+    +'<th style="width:7%">Value</th><th style="width:11%">Status</th>'
+    +'<th>Next Action</th><th style="width:88px">Date</th>'
+    +'</tr></thead><tbody>'+tbody+'</tbody></table>';
+}
+function setTxt(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+function val(id){return document.getElementById(id).value.trim();}
+
+function openModal(i){
+  EDITING=(i===null||i===undefined)?null:ALL_DEALS[i];
+  document.getElementById('modal-title').textContent=EDITING?'Edit Deal':'Add Deal';
+  document.getElementById('f-rep').innerHTML=ALL_TABS.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>';}).join('');
+  document.getElementById('f-status').innerHTML=STATUS_OPTIONS.map(function(s){return '<option value="'+esc(s)+'">'+esc(s)+'</option>';}).join('');
+  var d=EDITING||{};
+  setVal('f-deal',d.deal||'');
+  document.getElementById('f-deal').disabled=!!EDITING;
+  document.getElementById('deal-hint').style.display=EDITING?'none':'block';
+  setVal('f-rep',d.tab||d.rep||ALL_TABS[0]);
+  document.getElementById('f-rep').disabled=!!EDITING;
+  setVal('f-company',d.company||'');setVal('f-contact',d.contact||'');setVal('f-value',d.value||'');
+  setVal('f-email',d.email||'');setVal('f-phone',d.phone||'');
+  setVal('f-status',d.status||'Active');setVal('f-next',d.nextAction||'');
+  setVal('f-date',d.actionDate||'');setVal('f-notes',d.notes||'');
+  document.getElementById('btn-delete').style.display=EDITING?'inline-block':'none';
+  document.getElementById('modal').classList.add('open');
+}
+function setVal(id,v){document.getElementById(id).value=v;}
+function closeModal(){document.getElementById('modal').classList.remove('open');EDITING=null;}
+
+async function post(payload){
+  payload.token=TOKEN;
+  var resp=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  var data=await resp.json();
+  if(!data.ok) throw new Error(data.error||'save failed');
+  return data;
+}
+function toast(msg,isErr){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(isErr?' err':'');setTimeout(function(){t.className='toast';},2600);}
+
+async function saveDeal(){
+  var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Saving...';
+  var fields={company:val('f-company'),contact:val('f-contact'),value:val('f-value'),email:val('f-email'),phone:val('f-phone'),status:val('f-status'),nextAction:val('f-next'),actionDate:val('f-date'),notes:val('f-notes')};
+  try{
+    if(EDITING){
+      fields.action='update';fields.tab=EDITING.tab;fields.rowIndex=EDITING.rowIndex;fields.deal=EDITING.deal;fields.rep=EDITING.rep;
+      await post(fields);toast('Deal updated');
+    }else{
+      fields.action='add';fields.tab=val('f-rep');fields.rep=val('f-rep');fields.deal=val('f-deal');
+      var r=await post(fields);toast('Deal added: '+r.deal);
+    }
+    closeModal();await loadAllData();
+  }catch(err){toast(err.message,true);}
+  btn.disabled=false;btn.textContent='Save';
+}
+
+async function deleteDeal(){
+  if(!EDITING)return;
+  if(!confirm('Delete '+EDITING.deal+' ('+EDITING.company+')?\nThis removes the row from the Sheet.'))return;
+  try{await post({action:'delete',tab:EDITING.tab,rowIndex:EDITING.rowIndex,deal:EDITING.deal});toast('Deal deleted');closeModal();await loadAllData();}
+  catch(err){toast(err.message,true);}
+}
+
+document.getElementById('modal').addEventListener('click',function(e){if(e.target.id==='modal')closeModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
 
 loadAllData();
 </script>
