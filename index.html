@@ -60,6 +60,12 @@ table.deals tr:hover td{background:#F5F7FF!important}
 .pill-won{background:#639922;color:#fff}
 .pill-won-action{background:#E07B00;color:#fff}
 .pill-lost{background:#888780;color:#fff}
+.pill-unqual{background:#B0AEA6;color:#fff}
+tr.row-unqual td{border-left:4px solid #B0AEA6;background:#FAFAF8;opacity:.62}
+.star{color:#F5A623;font-size:13px;margin-right:3px}
+.new-check{display:flex;align-items:center;gap:8px}
+.new-check input{width:auto !important;margin:0}
+.new-check label{margin:0 !important;text-transform:none !important;letter-spacing:0 !important;font-size:13px !important;color:#012169;cursor:pointer;font-weight:600}
 .pill-parked{background:#009CDE;color:#fff}
 .rep-ben{font-size:10px;background:#E6F1FB;color:#012169;border-radius:8px;padding:2px 7px;font-weight:700;white-space:nowrap}
 .rep-ally{font-size:10px;background:#FFF3E0;color:#E07B00;border-radius:8px;padding:2px 7px;font-weight:700;white-space:nowrap}
@@ -183,6 +189,8 @@ table.deals th.sortable:hover{background:#023A8A}
   <div class="legend-item"><span class="sw" style="background:#E07B00"></span>Won — action needed</div>
   <div class="legend-item"><span class="sw" style="background:#3B6D11"></span>Won — approved</div>
   <div class="legend-item"><span class="sw" style="background:#888780"></span>Lost</div>
+  <div class="legend-item"><span class="sw" style="background:#B0AEA6"></span>Unqualified</div>
+  <div class="legend-item"><span class="star">★</span>New customer</div>
   <div class="legend-item"><span class="rep-ben">Ben</span></div>
   <div class="legend-item"><span class="rep-ally">Ally</span></div>
   <div class="legend-item"><span class="rep-steph">Steph</span></div>
@@ -213,6 +221,7 @@ table.deals th.sortable:hover{background:#023A8A}
         <div class="field"><label>Phone</label><input id="f-phone"></div>
       </div>
       <div class="field"><label>Status</label><select id="f-status"></select></div>
+      <div class="field new-check"><input type="checkbox" id="f-new"><label for="f-new">★ First opportunity — brand-new customer</label></div>
       <div class="field"><label>Next Action</label><textarea id="f-next"></textarea></div>
       <div class="field">
         <label>Next Action Date</label>
@@ -247,7 +256,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbztge8uSJlU1F5SPDbZ2NlI
 const TOKEN   = 'bs-deal-2026';   // must match TOKEN in Code.gs
 const GOAL    = 100000;
 
-const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Lost'];
+const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Lost','Unqualified'];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MNUM = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
 
@@ -256,9 +265,9 @@ let SORT={key:'date',dir:'asc'};
 
 function repClass(rep){var r=(rep||'').toLowerCase();if(r.indexOf('ally')>-1)return'rep-ally';if(r.indexOf('steph')>-1)return'rep-steph';return'rep-ben';}
 function repAccent(t){var r=(t||'').toLowerCase();if(r.indexOf('ally')>-1)return'ally';if(r.indexOf('steph')>-1)return'steph';return'ben';}
-function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
-function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
-var ORDER=['urgent','active','won \u2014 action','won \u2014 action needed','parked','won','lost'];
+function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('unqual')>-1)return'row-unqual';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
+function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('unqual')>-1)return'pill pill-unqual';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
+var ORDER=['urgent','active','won \u2014 action','won \u2014 action needed','parked','won','lost','unqual'];
 function statusRank(s){var sl=(s||'').toLowerCase();for(var i=0;i<ORDER.length;i++){if(sl.indexOf(ORDER[i])>-1)return i;}return 99;}
 function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function pad(n){return (n<10?'0':'')+n;}
@@ -267,7 +276,9 @@ function money(n){return '$'+Math.round(n||0).toLocaleString('en-US');}
 
 function isWon(s){return String(s||'').toLowerCase().indexOf('won')>-1;}
 function isLost(s){return String(s||'').toLowerCase().indexOf('lost')>-1;}
-function isOpenStatus(s){return !isWon(s)&&!isLost(s);}
+function isUnqual(s){return String(s||'').toLowerCase().indexOf('unqual')>-1;}
+function isOpenStatus(s){return !isWon(s)&&!isLost(s)&&!isUnqual(s);}
+function isNew(d){return String(d.newCustomer||'').trim()!=='';}
 function ymNow(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);}
 function closedMonthKey(d){
   var cd=toDateParts(d.closedDate||'');
@@ -389,7 +400,6 @@ function render(){
   setTxt('kpi-active',active);setTxt('kpi-won',won);setTxt('kpi-urgent',urgent);setTxt('kpi-lost',lost);
   setTxt('score-won',won);setTxt('score-lost',lost);setTxt('score-active',active);setTxt('score-parked',parked);
 
-  // rep cards
   document.getElementById('rep-grid').innerHTML = ALL_TABS.map(function(t){
     return '<div class="rep-card '+repAccent(t)+'">'
       +'<div class="rep-card-name">'+esc(t)+'</div>'
@@ -398,7 +408,6 @@ function render(){
       +'</div>';
   }).join('');
 
-  // live headline KPIs + pace
   setTxt('kpi-closed', money(totClosedVal));
   setTxt('kpi-closed-sub', totClosedCnt+' deal'+(totClosedCnt===1?'':'s')+' this month');
   setTxt('kpi-still', money(Math.max(GOAL-totClosedVal,0)));
@@ -419,7 +428,7 @@ function render(){
     : VIEW.map(function(d,i){return '<tr class="'+getRowClass(d.status)+'" onclick="openModal('+i+')">'
         +'<td>'+esc(d.deal)+'</td>'
         +'<td><span class="'+repClass(d.rep)+'">'+esc(d.rep)+'</span></td>'
-        +'<td>'+esc(d.company)+'</td>'
+        +'<td>'+(isNew(d)?'<span class="star" title="First opportunity \u2014 new customer">\u2605</span>':'')+esc(d.company)+'</td>'
         +'<td>'+esc(d.contact)+'</td>'
         +'<td>'+esc(d.value)+'</td>'
         +'<td><span class="'+getPill(d.status)+'">'+esc(d.status)+'</span></td>'
@@ -449,10 +458,10 @@ function openModal(i){
   document.getElementById('f-deal').disabled=!!EDITING;
   document.getElementById('deal-hint').style.display=EDITING?'none':'block';
   setVal('f-rep',d.tab||d.rep||ALL_TABS[0]);
-  document.getElementById('f-rep').disabled=!!EDITING;
   setVal('f-company',d.company||'');setVal('f-contact',d.contact||'');setVal('f-value',d.value||'');
   setVal('f-email',d.email||'');setVal('f-phone',d.phone||'');
   setVal('f-status',d.status||'Active');setVal('f-next',d.nextAction||'');setVal('f-notes',d.notes||'');
+  document.getElementById('f-new').checked=isNew(d);
   var p=toDateParts(d.actionDate||'');
   if(p){ setVal('f-date',p.date); setVal('f-time',p.time||''); DATE_LABEL=''; }
   else { setVal('f-date',''); setVal('f-time',''); DATE_LABEL=d.actionDate?String(d.actionDate):''; }
@@ -491,14 +500,14 @@ function toast(msg,isErr){var t=document.getElementById('toast');t.textContent=m
 
 async function saveDeal(){
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Saving...';
-  var fields={company:val('f-company'),contact:val('f-contact'),value:val('f-value'),email:val('f-email'),phone:val('f-phone'),status:val('f-status'),nextAction:val('f-next'),actionDate:computeDateValue(),notes:val('f-notes')};
+  var fields={company:val('f-company'),contact:val('f-contact'),value:val('f-value'),email:val('f-email'),phone:val('f-phone'),status:val('f-status'),nextAction:val('f-next'),actionDate:computeDateValue(),notes:val('f-notes'),newCustomer:document.getElementById('f-new').checked?'yes':''};
   try{
     if(EDITING){
-      fields.action='update';fields.tab=EDITING.tab;fields.rowIndex=EDITING.rowIndex;fields.deal=EDITING.deal;fields.rep=EDITING.rep;
-      await post(fields);toast('Deal updated');
+      fields.action='update';fields.tab=EDITING.tab;fields.rowIndex=EDITING.rowIndex;fields.deal=EDITING.deal;fields.rep=val('f-rep');
+      var r=await post(fields);toast(r.moved?'Deal moved to '+val('f-rep'):'Deal updated');
     }else{
       fields.action='add';fields.tab=val('f-rep');fields.rep=val('f-rep');fields.deal=val('f-deal');
-      var r=await post(fields);toast('Deal added: '+r.deal);
+      var r2=await post(fields);toast('Deal added: '+r2.deal);
     }
     closeModal();await loadAllData();
   }catch(err){toast(err.message,true);}
