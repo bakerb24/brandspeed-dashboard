@@ -40,6 +40,9 @@ body{background:#f0f2f7;padding:1.25rem}
 .refresh-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:11px;color:#888}
 .refresh-btn{background:#012169;color:#fff;border:none;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Calibri,Arial,sans-serif;font-weight:600}
 .refresh-btn:hover{background:#023A8A}
+.btn-toggle{background:#fff;color:#012169;border:1.5px solid #D0D8F0;padding:8px 18px;border-radius:7px;cursor:pointer;font-size:13px;font-family:Calibri,Arial,sans-serif;font-weight:700;margin-right:10px}
+.btn-toggle:hover{background:#F0F4FF}
+.btn-toggle.active{background:#012169;color:#fff;border-color:#012169}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#555;margin-bottom:10px}
 .legend-item{display:flex;align-items:center;gap:6px}
 .sw{width:12px;height:12px;border-radius:2px;display:inline-block;flex-shrink:0}
@@ -54,12 +57,14 @@ table.deals tr:hover td{background:#F5F7FF!important}
 .row-won-action td{border-left:4px solid #E07B00;background:#FFF8F0}
 .row-parked td{border-left:4px solid #009CDE;background:#F5FBFF}
 .row-lost td{border-left:4px solid #888780;background:#FAFAFA;opacity:0.75}
+.row-completed td{border-left:4px solid #6B7280;background:#F7F8FA;opacity:0.8}
 .pill{display:inline-block;font-size:10px;padding:3px 9px;border-radius:12px;font-weight:600;white-space:nowrap}
 .pill-urgent{background:#E24B4A;color:#fff}
 .pill-active{background:#378ADD;color:#fff}
 .pill-won{background:#639922;color:#fff}
 .pill-won-action{background:#E07B00;color:#fff}
 .pill-lost{background:#888780;color:#fff}
+.pill-completed{background:#6B7280;color:#fff}
 .pill-unqual{background:#B0AEA6;color:#fff}
 tr.row-unqual td{border-left:4px solid #B0AEA6;background:#FAFAF8;opacity:.62}
 .star{color:#F5A623;font-size:13px;margin-right:3px}
@@ -179,7 +184,7 @@ table.deals th.sortable:hover{background:#023A8A}
 
 <div class="refresh-bar">
   <span id="deal-summary">Loading deals...</span>
-  <button class="btn-add" onclick="openModal(null)">+ Add Deal</button><button class="refresh-btn" onclick="loadAllData()">↻ Refresh</button>
+  <button class="btn-add" onclick="openModal(null)">+ Add Deal</button><button class="btn-toggle" id="btn-toggle-open" onclick="setViewMode('open')">Show Open (0)</button><button class="btn-toggle" id="btn-toggle-won" onclick="setViewMode('won')">Show Won (0)</button><button class="btn-toggle" id="btn-toggle-completed" onclick="setViewMode('completed')">Show Completed (0)</button><button class="refresh-btn" onclick="loadAllData()">↻ Refresh</button>
 </div>
 
 <div class="legend">
@@ -189,6 +194,7 @@ table.deals th.sortable:hover{background:#023A8A}
   <div class="legend-item"><span class="sw" style="background:#E07B00"></span>Won — action needed</div>
   <div class="legend-item"><span class="sw" style="background:#3B6D11"></span>Won — approved</div>
   <div class="legend-item"><span class="sw" style="background:#888780"></span>Lost</div>
+  <div class="legend-item"><span class="sw" style="background:#6B7280"></span>Completed</div>
   <div class="legend-item"><span class="sw" style="background:#B0AEA6"></span>Unqualified</div>
   <div class="legend-item"><span class="star">★</span>New customer</div>
   <div class="legend-item"><span class="rep-ben">Ben</span></div>
@@ -256,17 +262,18 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbztge8uSJlU1F5SPDbZ2NlI
 const TOKEN   = 'bs-deal-2026';   // must match TOKEN in Code.gs
 const GOAL    = 100000;
 
-const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Lost','Unqualified'];
+const STATUS_OPTIONS = ['Active','Urgent','Parked','Won','Won \u2014 Action Needed','Completed','Lost','Unqualified'];
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MNUM = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,january:1,february:2,march:3,april:4,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
 
 let ALL_DEALS=[], VIEW=[], ALL_TABS=['Ben','Ally','Steph'], EDITING=null, DATE_LABEL='';
 let SORT={key:'date',dir:'asc'};
+let VIEW_MODE='open'; // 'open' | 'won' | 'completed'
 
 function repClass(rep){var r=(rep||'').toLowerCase();if(r.indexOf('ally')>-1)return'rep-ally';if(r.indexOf('steph')>-1)return'rep-steph';return'rep-ben';}
 function repAccent(t){var r=(t||'').toLowerCase();if(r.indexOf('ally')>-1)return'ally';if(r.indexOf('steph')>-1)return'steph';return'ben';}
-function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('unqual')>-1)return'row-unqual';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
-function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('unqual')>-1)return'pill pill-unqual';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
+function getRowClass(s){s=(s||'').toLowerCase();if(s.indexOf('urgent')>-1)return'row-urgent';if(s.indexOf('unqual')>-1)return'row-unqual';if(s.indexOf('completed')>-1)return'row-completed';if(s.indexOf('won')>-1&&(s.indexOf('action')>-1||s.indexOf('needed')>-1))return'row-won-action';if(s.indexOf('won')>-1)return'row-won';if(s.indexOf('lost')>-1)return'row-lost';if(s.indexOf('parked')>-1)return'row-parked';return'row-active';}
+function getPill(s){var sl=(s||'').toLowerCase();if(sl.indexOf('urgent')>-1)return'pill pill-urgent';if(sl.indexOf('unqual')>-1)return'pill pill-unqual';if(sl.indexOf('completed')>-1)return'pill pill-completed';if(sl.indexOf('won')>-1&&(sl.indexOf('action')>-1||sl.indexOf('needed')>-1))return'pill pill-won-action';if(sl.indexOf('won')>-1)return'pill pill-won';if(sl.indexOf('lost')>-1)return'pill pill-lost';if(sl.indexOf('parked')>-1)return'pill pill-parked';return'pill pill-active';}
 var ORDER=['urgent','active','won \u2014 action','won \u2014 action needed','parked','won','lost','unqual'];
 function statusRank(s){var sl=(s||'').toLowerCase();for(var i=0;i<ORDER.length;i++){if(sl.indexOf(ORDER[i])>-1)return i;}return 99;}
 function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -275,15 +282,17 @@ function parseValNum(v){if(!v)return 0;var n=String(v).replace(/[^0-9.]/g,'');va
 function money(n){return '$'+Math.round(n||0).toLocaleString('en-US');}
 
 function isWon(s){return String(s||'').toLowerCase().indexOf('won')>-1;}
+function isWonApproved(s){return String(s||'').trim().toLowerCase()==='won';}
+function isCompleted(s){return String(s||'').toLowerCase().indexOf('completed')>-1;}
 function isLost(s){return String(s||'').toLowerCase().indexOf('lost')>-1;}
 function isUnqual(s){return String(s||'').toLowerCase().indexOf('unqual')>-1;}
-function isOpenStatus(s){return !isWon(s)&&!isLost(s)&&!isUnqual(s);}
+function isOpenStatus(s){return !isWon(s)&&!isLost(s)&&!isUnqual(s)&&!isCompleted(s);}
 function isNew(d){return String(d.newCustomer||'').trim()!=='';}
 function ymNow(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);}
 function closedMonthKey(d){
   var cd=toDateParts(d.closedDate||'');
   if(cd){var p=cd.date.split('-');return p[0]+'-'+p[1];}
-  if(isWon(d.status)){var m=String(d.deal||'').match(/^(\d{2})-(\d{2})-/);if(m)return '20'+m[1]+'-'+m[2];}
+  if(isWon(d.status)||isCompleted(d.status)){var m=String(d.deal||'').match(/^(\d{2})-(\d{2})-/);if(m)return '20'+m[1]+'-'+m[2];}
   return null;
 }
 
@@ -372,6 +381,7 @@ function sortBy(key){
   else { SORT.key=key; SORT.dir='asc'; }
   render();
 }
+function setViewMode(mode){VIEW_MODE=mode;render();}
 function arrow(key){return SORT.key===key?'<span class="sort-arrow">'+(SORT.dir==='asc'?'\u25B2':'\u25BC')+'</span>':'';}
 function th(label,key,w){return '<th class="sortable"'+(w?' style="width:'+w+'"':'')+' onclick="sortBy(\''+key+'\')">'+label+arrow(key)+'</th>';}
 
@@ -391,7 +401,7 @@ function render(){
     if(s.indexOf('lost')>-1)lost++;
     if(s.indexOf('parked')>-1)parked++;
     if(isOpenStatus(d.status)) open[t]++;
-    if(isWon(d.status) && closedMonthKey(d)===ym){
+    if((isWon(d.status)||isCompleted(d.status)) && closedMonthKey(d)===ym){
       cwon[t]++; var v=parseValNum(d.value); cval[t]+=v;
       totClosedCnt++; totClosedVal+=v;
     }
@@ -422,7 +432,26 @@ function render(){
   ALL_DEALS.forEach(function(d){var t=d.tab||d.rep;if(counts[t]!=null)counts[t]++;});
   setTxt('deal-summary',ALL_DEALS.length+' total deals \u2014 '+ALL_TABS.map(function(t){return counts[t]+' '+t;}).join(' \u00b7 '));
 
-  VIEW=ALL_DEALS.slice().sort(cmp);
+  var openCount=0, wonApprovedCount=0, completedCount=0;
+  ALL_DEALS.forEach(function(d){
+    if(isWonApproved(d.status)) wonApprovedCount++;
+    else if(isCompleted(d.status)) completedCount++;
+    else openCount++;
+  });
+  var btnOpen=document.getElementById('btn-toggle-open');
+  if(btnOpen){ btnOpen.textContent='Show Open ('+openCount+')'; btnOpen.classList.toggle('active',VIEW_MODE==='open'); }
+  var btnWon=document.getElementById('btn-toggle-won');
+  if(btnWon){ btnWon.textContent='Show Won ('+wonApprovedCount+')'; btnWon.classList.toggle('active',VIEW_MODE==='won'); }
+  var btnCompleted=document.getElementById('btn-toggle-completed');
+  if(btnCompleted){ btnCompleted.textContent='Show Completed ('+completedCount+')'; btnCompleted.classList.toggle('active',VIEW_MODE==='completed'); }
+
+  var filteredDeals=ALL_DEALS.filter(function(d){
+    if(VIEW_MODE==='won') return isWonApproved(d.status);
+    if(VIEW_MODE==='completed') return isCompleted(d.status);
+    return !isCompleted(d.status) && !isWonApproved(d.status);
+  });
+
+  VIEW=filteredDeals.slice().sort(cmp);
   var tbody = VIEW.length===0
     ? '<tr class="empty-row"><td colspan="8">No deals yet \u2014 click \u201c+ Add Deal\u201d to start</td></tr>'
     : VIEW.map(function(d,i){return '<tr class="'+getRowClass(d.status)+'" onclick="openModal('+i+')">'
