@@ -299,6 +299,12 @@ function isLostOrUnqual(s){return isLost(s)||isUnqual(s);}
 function isOpenStatus(s){return !isWon(s)&&!isLost(s)&&!isUnqual(s)&&!isCompleted(s);}
 function isNew(d){return String(d.newCustomer||'').trim()!=='';}
 function ymNow(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+function lostMonthKey(d){
+  var cd=toDateParts(d.closedDate||'');
+  if(cd){var p=cd.date.split('-');return p[0]+'-'+p[1];}
+  var m=String(d.deal||'').match(/^(\d{2})-(\d{2})-/);if(m)return '20'+m[1]+'-'+m[2];
+  return null;
+}
 function closedMonthKey(d){
   var cd=toDateParts(d.closedDate||'');
   if(cd){var p=cd.date.split('-');return p[0]+'-'+p[1];}
@@ -408,7 +414,7 @@ function render(){
     var pastDue=isPastDue(d);
     if(s.indexOf('urgent')>-1||pastDue){urgent++;active++;}
     else if(s.indexOf('active')>-1)active++;
-    if(s.indexOf('lost')>-1)lost++;
+    if(isLost(d.status) && lostMonthKey(d)===ym)lost++;
     if(s.indexOf('parked')>-1)parked++;
     if(isOpenStatus(d.status)) open[t]++;
     if((isWon(d.status)||isCompleted(d.status)) && closedMonthKey(d)===ym){
